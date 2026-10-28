@@ -28,23 +28,21 @@ A local URL Shortener API built with FastAPI, SQLAlchemy, and SQLite.
 
 ## Project Structure
 
-```text
 URL_Shortener_API/
-├── app/
-│   ├── models/
-│   ├── routers/
-│   ├── schemas/
-│   ├── services/
-│   ├── main.py
-│   ├── database.py
-│   └── config.py
-├── alembic/
-├── data/
-├── tests/
-├── alembic.ini
-├── requirements.txt
-└── README.md
-```
+|-- app/
+|   |-- models/
+|   |-- routers/
+|   |-- schemas/
+|   |-- services/
+|   |-- main.py
+|   |-- database.pyz
+|   |-- config.py
+|-- alembic/
+|-- data/
+|-- tests/
+|-- alembic.ini
+|-- requirements.txt
+|-- README.md
 
 ## Requirements
 
@@ -103,25 +101,35 @@ http://127.0.0.1:8000/health
 
 ## Run Tests
 
-powershell
+Run the following command from the project directory:
+
+```powershell
 python -m pytest -v
 
 
 Tests use an isolated SQLite database and do not require external network access.
 
+Tests use an isolated SQLite database and do not require external network access.
+
 ## Configuration
 
-The API is intended to run locally on `127.0.0.1:8000`.
+The API runs locally by default at `127.0.0.1:8000`.
 
-Configuration may include:
+The following environment variables can be used to configure the application:
 
-- `HOST`
-- `PORT`
-- `BASE_URL`
+- `HOST`: Host address. Default: `127.0.0.1`
+- `PORT`: Port number. Default: `8000`
+- `BASE_URL`: Base URL for generated short links. Default: `http://127.0.0.1:8000`
 
-The default base URL is:
+Example PowerShell commands:
 
-`http://127.0.0.1:8000`
+```powershell
+$env:HOST = "127.0.0.1"
+$env:PORT = "8000"
+$env:BASE_URL = "http://127.0.0.1:8000"
+```
+
+These variables should be set before starting the API.
 
 ## Notes
 
@@ -133,3 +141,4 @@ The default base URL is:
 - Redirect responses use HTTP 302.
 
 This project is designed for local development and testing.
+
