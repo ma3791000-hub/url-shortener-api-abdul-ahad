@@ -1,0 +1,21 @@
+
+__pycache__/
+*.py[cod]
+
+
+.venv/
+
+
+.pytest_cache/
+
+
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+
+.env
+.env.*
+
+# IDE files
+.vscode/
