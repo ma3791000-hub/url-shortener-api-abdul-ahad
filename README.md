@@ -1,4 +1,3 @@
-
 # URL Shortener API
 
 A local URL Shortener API built with FastAPI, SQLAlchemy, and SQLite.
@@ -11,7 +10,7 @@ A local URL Shortener API built with FastAPI, SQLAlchemy, and SQLite.
 - Redirect short links to their original URLs.
 - Handle expired links and unknown codes.
 - Track clicks, timestamps, user agents, and referrers.
-- View link analytics and top referrers.
+- View link analytics, daily clicks, and top referrers.
 - List links with pagination.
 - Delete links and their associated click records.
 - Store data locally in SQLite.
@@ -28,26 +27,32 @@ A local URL Shortener API built with FastAPI, SQLAlchemy, and SQLite.
 
 ## Project Structure
 
+```text
 URL_Shortener_API/
+|
 |-- app/
 |   |-- models/
 |   |-- routers/
 |   |-- schemas/
 |   |-- services/
 |   |-- main.py
-|   |-- database.pyz
+|   |-- database.py
 |   |-- config.py
+|
 |-- alembic/
 |-- data/
 |-- tests/
+|-- offline_packages/
 |-- alembic.ini
 |-- requirements.txt
 |-- README.md
+```
 
 ## Requirements
 
-- Python installed
-- Dependencies installed in a virtual environment
+- Python 3.14
+- Dependencies listed in requirements.txt
+- A virtual environment
 
 ## Setup
 
@@ -55,6 +60,12 @@ Open PowerShell in the project directory:
 
 ```powershell
 cd D:\URL_Shortener_API
+```
+
+Create a virtual environment:
+
+```powershell
+python -m venv .venv
 ```
 
 Activate the virtual environment:
@@ -75,13 +86,27 @@ Apply database migrations:
 alembic upgrade head
 ```
 
+## Offline Installation
+
+The project includes an `offline_packages` folder containing the downloaded dependency packages.
+
+To install dependencies without accessing the online package index:
+
+```powershell
+python -m pip install --no-index --find-links=offline_packages -r requirements.txt
+```
+
+The included package files are intended for the tested Windows and Python 3.14 environment.
+
 ## Run the API
+
+Start the local server:
 
 ```powershell
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open the interactive API documentation:
+Interactive API documentation:
 
 http://127.0.0.1:8000/docs
 
@@ -105,11 +130,11 @@ Run the following command from the project directory:
 
 ```powershell
 python -m pytest -v
-
-
-Tests use an isolated SQLite database and do not require external network access.
+```
 
 Tests use an isolated SQLite database and do not require external network access.
+
+The project has been tested with 10 passing automated tests.
 
 ## Configuration
 
@@ -123,13 +148,13 @@ The following environment variables can be used to configure the application:
 
 Example PowerShell commands:
 
-```powershell
+powershell
 $env:HOST = "127.0.0.1"
 $env:PORT = "8000"
 $env:BASE_URL = "http://127.0.0.1:8000"
-```
 
-These variables should be set before starting the API.
+
+Set these variables before starting the API.
 
 ## Notes
 
@@ -141,4 +166,3 @@ These variables should be set before starting the API.
 - Redirect responses use HTTP 302.
 
 This project is designed for local development and testing.
-
