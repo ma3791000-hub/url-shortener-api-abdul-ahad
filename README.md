@@ -124,7 +124,32 @@ http://127.0.0.1:8000/health
 | GET | `/api/links/{code}/stats` | View link analytics |
 | DELETE | `/api/links/{code}` | Delete a link and its click data |
 
-## Run Tests
+## API Usage Examples
+
+### 1. Create a Short Link
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/api/links/" `
+  -H "Content-Type: application/json" `
+  -d '{"url":"https://www.google.com"}'
+
+
+```powershell
+curl.exe -X DELETE "http://127.0.0.1:8000/api/links/google1"
+
+```powershell
+curl.exe "http://127.0.0.1:8000/api/links/?page=1&page_size=10"
+
+```powershell
+curl.exe "http://127.0.0.1:8000/api/links/google1/stats"
+
+```powershell
+curl.exe -i "http://127.0.0.1:8000/google1"
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/api/links/" `
+  -H "Content-Type: application/json" `
+  -d '{"url":"https://www.google.com","custom_alias":"google1"}'
 
 Run the following command from the project directory:
 
@@ -134,7 +159,7 @@ python -m pytest -v
 
 Tests use an isolated SQLite database and do not require external network access.
 
-The project has been tested with 10 passing automated tests.
+The project has been tested with 12 passing automated tests.
 
 ## Configuration
 
@@ -148,15 +173,13 @@ The following environment variables can be used to configure the application:
 
 Example PowerShell commands:
 
-powershell
+```powershell
 $env:HOST = "127.0.0.1"
 $env:PORT = "8000"
 $env:BASE_URL = "http://127.0.0.1:8000"
 
 
 Set these variables before starting the API.
-
-## Notes
 
 - Only HTTP and HTTPS URLs should be accepted.
 - Custom aliases must be unique.
@@ -166,3 +189,14 @@ Set these variables before starting the API.
 - Redirect responses use HTTP 302.
 
 This project is designed for local development and testing.
+
+## Design Decisions and Trade-offs
+
+- SQLite is used because the application is designed for local development and does not require an external database server.
+- SQLAlchemy is used to manage database operations and keep database code organized.
+- Alembic is used for database schema migrations.
+- Short codes are generated using Python's secure random module to reduce the chance of collisions.
+- URL validation checks the URL format and HTTP/HTTPS scheme without making external network requests.
+- Click analytics are stored in SQLite, which keeps the application simple but may not be suitable for very high traffic.
+- Tests use an isolated in-memory SQLite database to avoid modifying the actual application database.
+- The application runs on localhost by default and does not depend on cloud services.
