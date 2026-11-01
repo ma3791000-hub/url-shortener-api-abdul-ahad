@@ -10,9 +10,7 @@ app = FastAPI(
     description="A local URL shortening service",
     version="1.0.0",
 )
-
 app.include_router(links.router)
-app.include_router(redirect.router)
 app.include_router(analytics.router)
 
 
@@ -28,3 +26,4 @@ def health_check():
     return {
         "status": "healthy"
     }
+app.include_router(redirect.router)
