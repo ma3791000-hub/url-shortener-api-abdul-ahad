@@ -254,3 +254,23 @@ def test_redirect_records_user_agent_and_referrer(client):
     finally:
         db.close()
         db_generator.close()
+def test_link_stats_returns_seven_days(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "stats01"
+        }
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.get("/api/links/stats01/stats")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["code"] == "stats01"
+    assert data["total_clicks"] == 0
+    assert len(data["clicks_per_day"]) == 7
