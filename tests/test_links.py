@@ -140,28 +140,6 @@ def test_link_stats(client):
     assert data["total_clicks"] == 0
     assert "clicks_per_day" in data
     assert "top_referrers" in data
-def test_link_stats(client):
-    create_response = client.post(
-        "/api/links/",
-        json={
-            "url": "https://example.com",
-            "custom_alias": "stats01",
-        },
-    )
-
-    assert create_response.status_code == 201
-
-    response = client.get(
-        "/api/links/stats01/stats"
-    )
-
-    assert response.status_code == 200
-
-    data = response.json()
-
-    assert data["total_clicks"] == 0
-    assert "clicks_per_day" in data
-    assert "top_referrers" in data
 def test_redirect_records_click(client):
     create_response = client.post(
         "/api/links/",
@@ -231,3 +209,48 @@ def test_invalid_url_is_rejected(client):
     )
 
     assert response.status_code == 422
+def test_redirect_records_user_agent_and_referrer(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "track01",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.get(
+        "/track01",
+        headers={
+            "User-Agent": "TestBrowser/1.0",
+            "Referer": "https://google.com",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+
+    from app.database import get_db
+    from app.main import app
+    from app.models import Click, Link
+
+    db_generator = app.dependency_overrides[get_db]()
+    db = next(db_generator)
+
+    try:
+        link = db.query(Link).filter(
+            Link.code == "track01"
+        ).first()
+
+        click = db.query(Click).filter(
+            Click.link_id == link.id
+        ).first()
+
+        assert click is not None
+        assert click.user_agent == "TestBrowser/1.0"
+        assert click.referrer == "https://google.com"
+
+    finally:
+        db.close()
+        db_generator.close()
