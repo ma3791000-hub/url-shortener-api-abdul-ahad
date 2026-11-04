@@ -83,6 +83,7 @@ def get_link_stats(
 
     return {
         "code": link.code,
+        "title": link.title,
         "total_clicks": total_clicks,
         "clicks_per_day": clicks_per_day,
         "top_referrers": [

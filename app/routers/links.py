@@ -1,12 +1,12 @@
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.config import BASE_URL
 from app.database import get_db
 from app.models import Click, Link
-from app.schemas import LinkCreate
+from app.schemas.link import LinkCreate, LinkResponse, LinkListResponse
 from app.services.link_service import create_link
+from app.security import verify_api_key
 
 
 router = APIRouter(
@@ -15,10 +15,15 @@ router = APIRouter(
 )
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=LinkResponse,
+)
 def create_short_link(
     link_data: LinkCreate,
     db: Session = Depends(get_db),
+    _: None = Depends(verify_api_key),
 ):
     try:
         link = create_link(
@@ -26,6 +31,7 @@ def create_short_link(
             original_url=str(link_data.url),
             custom_alias=link_data.custom_alias,
             expires_at=link_data.expires_at,
+            title=link_data.title,
         )
     except ValueError as error:
         raise HTTPException(
@@ -33,17 +39,21 @@ def create_short_link(
             detail=str(error),
         ) from error
 
-    return {
-        "id": link.id,
-        "code": link.code,
-        "original_url": link.original_url,
-        "short_url": f"{BASE_URL}/{link.code}",
-        "created_at": link.created_at,
-        "expires_at": link.expires_at,
-    }
+    return LinkResponse(
+        id=link.id,
+        code=link.code,
+        original_url=link.original_url,
+        short_url=f"{BASE_URL}/{link.code}",
+        created_at=link.created_at,
+        expires_at=link.expires_at,
+        title=link.title,
+    )
 
 
-@router.get("/")
+@router.get(
+    "/",
+    response_model=LinkListResponse,
+)
 def list_links(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
@@ -59,26 +69,32 @@ def list_links(
         .all()
     )
 
-    return {
-        "page": page,
-        "page_size": page_size,
-        "total": total,
-        "links": [
-            {
-                "id": link.id,
-                "code": link.code,
-                "original_url": link.original_url,
-                "short_url": f"{BASE_URL}/{link.code}",
-                "created_at": link.created_at,
-                "expires_at": link.expires_at,
-            }
-            for link in links
-        ],
-    }
+    response_links = [
+        LinkResponse(
+            id=link.id,
+            code=link.code,
+            original_url=link.original_url,
+            short_url=f"{BASE_URL}/{link.code}",
+            created_at=link.created_at,
+            expires_at=link.expires_at,
+            title=link.title,
+        )
+        for link in links
+    ]
+
+    return LinkListResponse(
+        page=page,
+        page_size=page_size,
+        total=total,
+        links=response_links,
+    )
+
+
 @router.delete("/{code}")
 def delete_short_link(
     code: str,
     db: Session = Depends(get_db),
+    _: None = Depends(verify_api_key),
 ):
     link = db.query(Link).filter(Link.code == code).first()
 

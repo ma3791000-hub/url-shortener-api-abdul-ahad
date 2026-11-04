@@ -274,3 +274,68 @@ def test_link_stats_returns_seven_days(client):
     assert data["code"] == "stats01"
     assert data["total_clicks"] == 0
     assert len(data["clicks_per_day"]) == 7
+
+def test_title_saved_and_returned(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "title01",
+            "title": "My Test Link",
+        },
+    )
+
+    assert create_response.status_code == 201
+    assert create_response.json()["title"] == "My Test Link"
+
+    list_response = client.get("/api/links/")
+
+    assert list_response.status_code == 200
+    assert list_response.json()["links"][0]["title"] == "My Test Link"
+
+    stats_response = client.get("/api/links/title01/stats")
+
+    assert stats_response.status_code == 200
+    assert stats_response.json()["title"] == "My Test Link"
+
+
+def test_missing_api_key_returns_401(client):
+    client.headers.pop("x-api-key", None)
+
+    response = client.post(
+        "/api/links/",
+        json={"url": "https://example.com"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_wrong_api_key_returns_401(client):
+    response = client.post(
+        "/api/links/",
+        headers={"x-api-key": "wrong_key_123"},
+        json={"url": "https://example.com"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_public_redirect_still_returns_302(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "public01",
+        },
+    )
+
+    assert create_response.status_code == 201
+    client.headers.pop("x-api-key", None)
+
+    response = client.get(
+        "/public01",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert response.headers["location"] == "https://example.com/"

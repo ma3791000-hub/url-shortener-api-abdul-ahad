@@ -38,6 +38,7 @@ def create_link(
     original_url: str,
     custom_alias: str | None = None,
     expires_at: datetime | None = None,
+    title: str | None = None,
 ) -> Link:
     if custom_alias:
         existing_link = (
@@ -57,6 +58,7 @@ def create_link(
         code=code,
         original_url=original_url,
         expires_at=expires_at,
+          title=title,
     )
 
     
