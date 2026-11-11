@@ -118,6 +118,11 @@ def test_delete_link(client):
 
     assert "delete1" not in codes
 
+def test_delete_without_api_key_returns_401(client):
+        client.headers.pop("x-api-key", None)
+        response = client.delete("/api/links/test123")
+
+        assert response.status_code == 401
 def test_link_stats(client):
     create_response = client.post(
         "/api/links/",
@@ -339,3 +344,10 @@ def test_public_redirect_still_returns_302(client):
 
     assert response.status_code == 302
     assert response.headers["location"] == "https://example.com/"
+def test_delete_with_wrong_api_key_returns_401(client):
+    response = client.delete(
+        "/api/links/test123",
+        headers={"X-API-Key": "wrong-api-key"}
+    )
+
+    assert response.status_code == 401
