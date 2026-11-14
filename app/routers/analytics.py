@@ -1,7 +1,8 @@
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Query
+from app.schemas.link import LinkStatsResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -15,10 +16,12 @@ router = APIRouter(
 )
 
 
-@router.get("/{code}/stats")
+@router.get("/{code}/stats", response_model=LinkStatsResponse)
 def get_link_stats(
     code: str,
+     days: int = Query(default=7, ge=1, le=30),
     db: Session = Depends(get_db),
+
 ):
     link = (
         db.query(Link)
@@ -38,7 +41,14 @@ def get_link_stats(
         .scalar()
     )
 
-    seven_days_ago = datetime.utcnow() - timedelta(days=6)
+    current_time = datetime.now(timezone.utc)
+    start_date = current_time.date() - timedelta(days=days - 1)
+
+    start_datetime = datetime.combine(
+    start_date,
+    datetime.min.time(),
+    tzinfo=timezone.utc,
+)
     daily_results = (
         db.query(
             func.date(Click.clicked_at).label("day"),
@@ -46,7 +56,7 @@ def get_link_stats(
         )
         .filter(
             Click.link_id == link.id,
-            Click.clicked_at >= seven_days_ago,
+            Click.clicked_at >= start_datetime,
         )
         .group_by(func.date(Click.clicked_at))
         .all()
@@ -58,8 +68,8 @@ def get_link_stats(
     }
 
     clicks_per_day = []
-    for i in range(7):
-        day = (seven_days_ago + timedelta(days=i)).date().isoformat()
+    for i in range(days):
+        day = (start_date + timedelta(days=i)).isoformat()
         clicks_per_day.append({
             "date": day,
             "clicks": daily_counts.get(day, 0),

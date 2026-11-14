@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 from app.config import BASE_URL
 from app.database import get_db
 from app.models import Click, Link
-from app.schemas.link import LinkCreate, LinkResponse, LinkListResponse
+from app.schemas.link import (
+    LinkCreate,
+    LinkUpdate,
+    LinkResponse,
+    LinkListResponse,
+)
 from app.services.link_service import create_link
 from app.security import verify_api_key
 
@@ -50,6 +55,42 @@ def create_short_link(
     )
 
 
+@router.patch(
+    "/{code}",
+    response_model=LinkResponse,
+)
+def update_short_link(
+    code: str,
+    link_data: LinkUpdate,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_api_key),
+):
+    link = db.query(Link).filter(Link.code == code).first()
+
+    if link is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Short link not found",
+        )
+
+    update_data = link_data.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(link, field, value)
+
+    db.commit()
+    db.refresh(link)
+
+    return LinkResponse(
+        id=link.id,
+        code=link.code,
+        original_url=link.original_url,
+        short_url=f"{BASE_URL}/{link.code}",
+        created_at=link.created_at,
+        expires_at=link.expires_at,
+        title=link.title,
+    )
+
 @router.get(
     "/",
     response_model=LinkListResponse,
@@ -57,12 +98,35 @@ def create_short_link(
 def list_links(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
+    search: str | None = Query(default=None),
+    status: str = Query(default="all", pattern="^(active|expired|all)$"),
     db: Session = Depends(get_db),
 ):
-    total = db.query(Link).count()
+    query = db.query(Link)
+    if search:
+        query = query.filter(
+            Link.title.ilike(f"%{search}%")
+        )
+    from datetime import datetime, timezone
+
+    current_time = datetime.now(timezone.utc)
+
+    if status == "active":
+        query = query.filter(
+            (Link.expires_at.is_(None)) |
+            (Link.expires_at > current_time)
+        )
+
+    elif status == "expired":
+        query = query.filter(
+            Link.expires_at.isnot(None),
+            Link.expires_at <= current_time
+        )
+
+    total = query.count()
 
     links = (
-        db.query(Link)
+        query
         .order_by(Link.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -88,6 +152,7 @@ def list_links(
         total=total,
         links=response_links,
     )
+
 
 
 @router.delete("/{code}")

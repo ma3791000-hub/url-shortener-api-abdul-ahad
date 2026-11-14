@@ -44,7 +44,7 @@ def redirect_to_original(
 
     click = Click(
         link_id=link.id,
-        clicked_at=datetime.utcnow(),
+        clicked_at=datetime.now(timezone.utc),
         user_agent=request.headers.get("user-agent"),
         referrer=request.headers.get("referer"),
     )

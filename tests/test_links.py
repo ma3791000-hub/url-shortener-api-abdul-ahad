@@ -351,3 +351,178 @@ def test_delete_with_wrong_api_key_returns_401(client):
     )
 
     assert response.status_code == 401
+
+
+def test_update_link_title(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "update01",
+            "title": "Old Title",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.patch(
+        "/api/links/update01",
+        json={"title": "New Title"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["title"] == "New Title"
+    assert data["code"] == "update01"
+    assert data["original_url"] == "https://example.com/"
+
+
+def test_clear_link_expiry(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "clear01",
+            "expires_at": "2099-12-31T23:59:00",
+        },
+    )
+
+    assert create_response.status_code == 201
+    assert create_response.json()["expires_at"] is not None
+
+    response = client.patch(
+        "/api/links/clear01",
+        json={"expires_at": None},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["expires_at"] is None
+
+
+def test_update_unknown_link_returns_404(client):
+    response = client.patch(
+        "/api/links/unknown1",
+        json={"title": "New Title"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_update_without_api_key_returns_401(client):
+    client.headers.pop("x-api-key", None)
+
+    response = client.patch(
+        "/api/links/update01",
+        json={"title": "New Title"},
+    )
+
+    assert response.status_code == 401
+
+def test_search_links_by_part_of_title(client):
+    client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com/1",
+            "custom_alias": "search01",
+            "title": "Python Programming Course",
+        },
+    )
+
+    client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com/2",
+            "custom_alias": "search02",
+            "title": "Java Programming Course",
+        },
+    )
+
+    response = client.get(
+        "/api/links/?search=python"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 1
+    assert data["links"][0]["code"] == "search01"
+
+
+def test_filter_only_expired_links(client):
+    client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com/old",
+            "custom_alias": "expire01",
+            "title": "Expired Link",
+            "expires_at": "2020-01-01T10:00:00",
+        },
+    )
+
+    client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com/new",
+            "custom_alias": "active01",
+            "title": "Active Link",
+        },
+    )
+
+    response = client.get(
+        "/api/links/?status=expired"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    codes = [
+        link["code"]
+        for link in data["links"]
+    ]
+
+    assert "expire01" in codes
+    assert "active01" not in codes
+
+
+def test_link_stats_returns_three_days(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "stats03",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.get(
+        "/api/links/stats03/stats?days=3"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data["clicks_per_day"]) == 3
+
+
+def test_link_stats_rejects_invalid_days(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "stats04",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.get(
+        "/api/links/stats04/stats?days=0"
+    )
+
+    assert response.status_code == 422

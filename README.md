@@ -12,7 +12,9 @@ A local URL Shortener API built with FastAPI, SQLAlchemy, and SQLite.
 - Handle expired links and unknown codes.
 - Track clicks, timestamps, user agents, and referrers.
 - View link analytics, daily clicks, and top referrers.
-- List links with pagination.
+- List links with pagination, title search, and status filters.
+- Update link titles and expiration dates using the PATCH endpoint.
+- View daily click statistics for a customizable 1–30 day period.
 - Delete links and their associated click records.
 - Protect link creation and deletion using API key authentication.
 - Store data locally in SQLite.
@@ -147,59 +149,60 @@ http://127.0.0.1:8000/health
 | Method | Endpoint | Purpose |
 |---|---|---|
 | POST | `/api/links/` | Create a short link |
-| GET | `/api/links/` | List links with pagination |
+| GET | `/api/links/` | List links with pagination, search, and status filters |
+| PATCH | `/api/links/{code}` | Update link title and expiration date |
 | GET | `/{code}` | Redirect to original URL |
-| GET | `/api/links/{code}/stats` | View link analytics |
+| GET | `/api/links/{code}/stats` | View link analytics for a selected number of days |
 | DELETE | `/api/links/{code}` | Delete a link and click data |
 
-Create and Delete endpoints require the `X-API-Key` header.
+
+Create, Update, and Delete endpoints require the `X-API-Key` header.
 
 ## API Usage Examples
 
 Replace `your_secret_api_key_here` with the API_KEY configured in your `.env` file.
 
-### 1. Create a Short Link
+1. Create a Short Link
 
-```powershell
 curl.exe -X POST "http://127.0.0.1:8000/api/links/" `
   -H "Content-Type: application/json" `
   -H "X-API-Key: your_secret_api_key_here" `
   -d '{"url":"https://www.google.com","title":"Google Website"}'
-```
 
-### 2. Create a Custom Alias
+2. Create a Custom Alias
 
-```powershell
 curl.exe -X POST "http://127.0.0.1:8000/api/links/" `
   -H "Content-Type: application/json" `
   -H "X-API-Key: your_secret_api_key_here" `
   -d '{"url":"https://www.google.com","custom_alias":"google1","title":"Google"}'
-```
 
-### 3. List Short Links
+3. List Short Links
 
-```powershell
 curl.exe "http://127.0.0.1:8000/api/links/?page=1&page_size=10"
-```
 
-### 4. View Link Analytics
+4. Update a Short Link
 
-```powershell
-curl.exe "http://127.0.0.1:8000/api/links/google1/stats"
-```
+curl.exe -X PATCH "http://127.0.0.1:8000/api/links/google1" `
+  -H "Content-Type: application/json" `
+  -H "X-API-Key: your_secret_api_key_here" `
+  -d '{"title":"Updated Google Website","expires_at":null}'
 
-### 5. Redirect to Original URL
+5. Search and Filter Short Links
 
-```powershell
+curl.exe "http://127.0.0.1:8000/api/links/?search=Google&status=active&page=1&page_size=10"
+
+6. View Link Analytics for Selected Days
+
+curl.exe "http://127.0.0.1:8000/api/links/google1/stats?days=3"
+
+7. Redirect to Original URL
+
 curl.exe -i "http://127.0.0.1:8000/google1"
-```
 
-### 6. Delete a Short Link
+8. Delete a Short Link
 
-```powershell
 curl.exe -X DELETE "http://127.0.0.1:8000/api/links/google1" `
   -H "X-API-Key: your_secret_api_key_here"
-```
 
 ## Testing
 
@@ -211,7 +214,7 @@ python -m pytest -v
 
 Tests use an isolated SQLite database and do not require external network access.
 
-The project currently has **18 passing automated tests**.
+The project currently has **26 passing automated tests**.
 
 ## Configuration
 

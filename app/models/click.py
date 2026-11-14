@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime,timezone
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -19,7 +19,7 @@ class Click(Base):
         index=True,
     )
     clicked_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False, index=True
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True
     )
     user_agent: Mapped[str | None] = mapped_column(
         String(500), nullable=True
