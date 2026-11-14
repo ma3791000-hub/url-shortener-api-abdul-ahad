@@ -526,3 +526,23 @@ def test_link_stats_rejects_invalid_days(client):
     )
 
     assert response.status_code == 422
+def test_expires_at_with_timezone_offset_is_converted_to_utc(client):
+    from datetime import datetime, timedelta, timezone
+
+    pk_time = timezone(timedelta(hours=5))
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "tzone01",
+            "expires_at": expires.astimezone(pk_time).isoformat(),
+        },
+    )
+
+    assert response.status_code == 201
+
+    stored = datetime.fromisoformat(response.json()["expires_at"])
+    assert stored.replace(tzinfo=timezone.utc) - expires < timedelta(seconds=1)
+    assert client.get("/tzone01", follow_redirects=False).status_code == 302

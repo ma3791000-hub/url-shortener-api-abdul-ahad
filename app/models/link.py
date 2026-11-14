@@ -23,5 +23,5 @@ class Link(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
     expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
+        DateTime (timezone=True), nullable=True
     )
