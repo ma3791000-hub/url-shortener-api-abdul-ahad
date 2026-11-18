@@ -4,11 +4,14 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.security import verify_api_key
 from app.models import Click, Link
 from app.schemas.link import (
     DailyClickStats,
+    ImpressionsResponse,
     LinkStatsResponse,
     TopReferrerStats,
+    to_utc,
 )
 
 
@@ -92,4 +95,60 @@ def get_link_stats(
             TopReferrerStats(referrer=row.referrer, clicks=row.clicks)
             for row in top_referrers
         ],
+    )
+
+@router.get(
+    "/{code}/impressions",
+    response_model=ImpressionsResponse,
+)
+def get_link_impressions(
+    code: str,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(verify_api_key),
+):
+    link = db.query(Link).filter(Link.code == code).first()
+
+    if link is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Short link not found",
+        )
+
+    total = (
+        db.query(func.count(Click.id))
+        .filter(Click.link_id == link.id)
+        .scalar()
+    ) or 0
+
+    current_time = datetime.now(timezone.utc)
+
+    start_of_day = datetime.combine(
+        current_time.date(),
+        datetime.min.time(),
+        tzinfo=timezone.utc,
+    )
+
+    start_of_next_day = start_of_day + timedelta(days=1)
+
+    today = (
+        db.query(func.count(Click.id))
+        .filter(
+            Click.link_id == link.id,
+            Click.clicked_at >= start_of_day,
+            Click.clicked_at < start_of_next_day,
+        )
+        .scalar()
+    ) or 0
+
+    last_impression_at = (
+        db.query(func.max(Click.clicked_at))
+        .filter(Click.link_id == link.id)
+        .scalar()
+    )
+    last_impression_at = to_utc(last_impression_at)
+
+    return ImpressionsResponse(
+        total=total,
+        today=today,
+        last_impression_at=last_impression_at,
     )

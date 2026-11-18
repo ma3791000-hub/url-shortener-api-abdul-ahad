@@ -214,7 +214,7 @@ python -m pytest -v
 
 Tests use an isolated SQLite database and do not require external network access.
 
-The project currently has **27 passing automated tests**.
+The project currently has **33 passing automated tests**.
 
 ## Configuration
 

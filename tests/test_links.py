@@ -546,3 +546,141 @@ def test_expires_at_with_timezone_offset_is_converted_to_utc(client):
     stored = datetime.fromisoformat(response.json()["expires_at"])
     assert stored.replace(tzinfo=timezone.utc) - expires < timedelta(seconds=1)
     assert client.get("/tzone01", follow_redirects=False).status_code == 302
+
+def test_link_impressions_with_no_clicks(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "impress0",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.get(
+        "/api/links/impress0/impressions"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 0
+    assert data["today"] == 0
+    assert data["last_impression_at"] is None
+
+def test_redirects_are_counted_as_impressions(client):
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "impress1",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    first_redirect = client.get(
+        "/impress1",
+        follow_redirects=False,
+    )
+
+    second_redirect = client.get(
+        "/impress1",
+        follow_redirects=False,
+    )
+
+    assert first_redirect.status_code == 302
+    assert second_redirect.status_code == 302
+
+    response = client.get(
+        "/api/links/impress1/impressions"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 2
+    assert data["today"] == 2
+    assert data["last_impression_at"] is not None
+
+def test_impressions_without_api_key_returns_401(client):
+    client.headers.pop("x-api-key", None)
+
+    response = client.get(
+        "/api/links/impress1/impressions"
+    )
+
+    assert response.status_code == 401
+
+def test_impressions_with_wrong_api_key_returns_401(client):
+    response = client.get(
+        "/api/links/impress1/impressions",
+        headers={"X-API-Key": "wrong-api-key"},
+    )
+
+    assert response.status_code == 401
+
+def test_impressions_for_unknown_link_returns_404(client):
+    response = client.get(
+        "/api/links/unknown99/impressions"
+    )
+
+    assert response.status_code == 404
+
+def test_impressions_today_counts_only_current_utc_day(client):
+    from datetime import datetime, timedelta, timezone
+
+    from app.database import get_db
+    from app.main import app
+    from app.models import Click, Link
+
+    create_response = client.post(
+        "/api/links/",
+        json={
+            "url": "https://example.com",
+            "custom_alias": "utcimp01",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    db_generator = app.dependency_overrides[get_db]()
+    db = next(db_generator)
+
+    try:
+        link = db.query(Link).filter(
+            Link.code == "utcimp01"
+        ).first()
+
+        now = datetime.now(timezone.utc)
+
+        db.add_all([
+            Click(
+                link_id=link.id,
+                clicked_at=now,
+            ),
+            Click(
+                link_id=link.id,
+                clicked_at=now - timedelta(days=1),
+            ),
+        ])
+
+        db.commit()
+
+    finally:
+        db.close()
+        db_generator.close()
+
+    response = client.get(
+        "/api/links/utcimp01/impressions"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total"] == 2
+    assert data["today"] == 1

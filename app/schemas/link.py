@@ -63,3 +63,8 @@ class LinkStatsResponse(BaseModel):
     total_clicks: int
     clicks_per_day: list[DailyClickStats]
     top_referrers: list[TopReferrerStats]
+
+class ImpressionsResponse(BaseModel):
+    total: int
+    today: int
+    last_impression_at: datetime | None = None
